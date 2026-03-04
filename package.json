@@ -1,0 +1,94 @@
+{
+    "name": "@samofprog/corekit",
+    "version": "1.0.0",
+    "description": "Shared NestJS utilities — error handling, structured logging, and more.",
+    "author": "Samuel Assemien <sa.assemien@gmail.com>",
+    "license": "MIT",
+    "type": "module",
+    "main": "./dist/index.cjs",
+    "module": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "import": {
+                "types": "./dist/index.d.ts",
+                "default": "./dist/index.js"
+            },
+            "require": {
+                "types": "./dist/index.d.cts",
+                "default": "./dist/index.cjs"
+            }
+        }
+    },
+    "files": [
+        "dist/",
+        "LICENCE",
+        "README.md"
+    ],
+    "engines": {
+        "node": ">=18.0.0"
+    },
+    "scripts": {
+        "clean": "rimraf dist",
+        "prebuild": "yarn clean && yarn lint",
+        "build": "tsup",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "test:coverage": "vitest run --coverage",
+        "publish:local": "yarn build && yalc publish",
+        "publish:online": "yarn build && npm publish --access public",
+        "lint": "eslint 'src/**/*.ts' --fix",
+        "lint:check": "eslint 'src/**/*.ts'",
+        "format": "prettier --write 'src/**/*.ts'",
+        "prepare": "husky"
+    },
+    "peerDependencies": {
+        "@nestjs/common": "^9.0.0 || ^10.0.0 || ^11.0.0",
+        "axios": "^1.0.0"
+    },
+    "peerDependenciesMeta": {
+        "axios": {
+            "optional": true
+        }
+    },
+    "devDependencies": {
+        "@eslint/js": "^9.0.0",
+        "@nestjs/common": "^11.0.0",
+        "axios": "^1.7.0",
+        "eslint": "^9.0.0",
+        "eslint-config-prettier": "^10.0.0",
+        "eslint-plugin-prettier": "^5.2.0",
+        "husky": "^9.0.0",
+        "vitest": "^3.0.0",
+        "lint-staged": "^15.0.0",
+        "prettier": "^3.4.0",
+        "reflect-metadata": "^0.2.0",
+        "rimraf": "^6.0.0",
+        "rxjs": "^7.8.0",
+        "tsup": "^8.0.0",
+        "typescript": "~5.7.0",
+        "typescript-eslint": "^8.0.0"
+    },
+    "lint-staged": {
+        "src/**/*.ts": [
+            "eslint --fix",
+            "prettier --write"
+        ]
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/samofprog/corekit.git"
+    },
+    "bugs": {
+        "url": "https://github.com/samofprog/corekit/issues"
+    },
+    "homepage": "https://github.com/samofprog/corekit#readme",
+    "keywords": [
+        "nestjs",
+        "utils",
+        "error-handling",
+        "logger",
+        "typescript",
+        "corekit"
+    ]
+}
