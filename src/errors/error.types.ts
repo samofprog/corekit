@@ -35,6 +35,7 @@ export type AxiosLikeError = {
     readonly isAxiosError: true;
     readonly message: string;
     readonly code?: string | undefined;
+    readonly status?: number | undefined;
     readonly stack?: string | undefined;
     readonly response?:
         | {
