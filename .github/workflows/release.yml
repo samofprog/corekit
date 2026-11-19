@@ -41,8 +41,8 @@ jobs:
       - name: Build
         run: yarn build
 
-      - name: Publish to npm
-        run: npm publish --access public --ignore-scripts
+      - name: Stage npm publish
+        run: npm stage publish . --access public --provenance --ignore-scripts
 
   release:
     needs: publish
