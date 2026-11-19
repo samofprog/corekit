@@ -35,7 +35,7 @@ import {
 try {
     await axios.get('/api/users');
 } catch (error) {
-    // Human-readable message (appends response data for Axios errors)
+    // Human-readable message (appends response data for Axios errors, truncated to 2048 chars)
     const message = getErrorMessage(error);
 
     // Message + stack trace
@@ -75,17 +75,36 @@ warn(logger, 'Missing field', { email: null, name: 'Alice' });
 logError(logger, 'Payment failed', { orderId: 'ORD-42' }, err.stack);
 ```
 
+## Security notes
+
+These helpers are built for server-side logs. Keep the following in mind:
+
+- **Never return their output to clients.** `getErrorMessage` appends the upstream response body
+  of Axios errors, and `getErrorDetail` exposes the stack trace and the raw response body. Both may
+  contain secrets, tokens or personal data. In exception filters, send a generic message with the
+  status code and log the detail server-side.
+- **Response bodies are truncated in messages only.** `getErrorMessage` keeps at most 2048
+  characters of serialized response data. `getErrorDetail(error).data` stays untruncated: do not
+  log it as is when the upstream may return large payloads.
+- **Never pass raw errors as log data.** `log(logger, 'Call failed', { err })` serializes an
+  `AxiosError` through its `toJSON()`, which includes the request config with `Authorization`
+  headers, cookies and credentials. Log `getErrorMessage(err)` or selected fields instead. Recent
+  axios 1.x versions also accept a `redact` request option listing keys to mask.
+- **Messages are not escaped.** Log data is JSON-encoded, but the `message` argument and error
+  messages are written as is. With a text logger, a newline coming from user input can forge an
+  extra log line: do not build log messages from untrusted input, or put that input in `data`.
+
 ## API
 
 ### Error utilities
 
 | Function | Description |
 | --- | --- |
-| `getErrorMessage(error)` | Human-readable message from any error type |
+| `getErrorMessage(error)` | Human-readable message from any error type, response data truncated to 2048 chars |
 | `getErrorDetails(error)` | Message + optional stack trace |
 | `getErrorDetail(error)` | Full structured `ErrorDetail` object |
 | `isAxiosError(error)` | Type guard for Axios-like errors (duck-typed) |
-| `isTimeoutError(error)` | Detects timeout errors |
+| `isTimeoutError(error)` | Detects Axios timeouts (`ECONNABORTED`, `ETIMEDOUT`, or a message containing "timeout") |
 
 ### Logger utilities
 

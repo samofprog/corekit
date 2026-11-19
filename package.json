@@ -1,6 +1,6 @@
 {
     "name": "@samofprog/corekit",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "Shared NestJS utilities — error handling, structured logging, and more.",
     "author": "Samuel Assemien <sa.assemien@gmail.com>",
     "license": "MIT",
@@ -30,20 +30,19 @@
     },
     "scripts": {
         "clean": "rimraf dist",
-        "prebuild": "yarn clean && yarn lint",
+        "prebuild": "yarn clean && yarn lint:check",
         "build": "tsup",
         "test": "vitest run",
         "test:watch": "vitest",
         "test:coverage": "vitest run --coverage",
         "publish:local": "yarn build && yalc publish",
-        "publish:online": "yarn build && npm publish --access public",
         "lint": "eslint 'src/**/*.ts' --fix",
         "lint:check": "eslint 'src/**/*.ts'",
         "format": "prettier --write 'src/**/*.ts'",
         "prepare": "husky"
     },
     "peerDependencies": {
-        "@nestjs/common": "^9.0.0 || ^10.0.0 || ^11.0.0",
+        "@nestjs/common": "^9.0.0 || ^10.0.0 || ^11.0.0 || ^12.0.0",
         "axios": "^1.0.0"
     },
     "peerDependenciesMeta": {
@@ -53,8 +52,8 @@
     },
     "devDependencies": {
         "@eslint/js": "^9.0.0",
-        "@nestjs/common": "^11.0.0",
-        "@vitest/coverage-v8": "^3.0.0",
+        "@nestjs/common": "^12.0.0",
+        "@vitest/coverage-v8": "^4.0.0",
         "axios": "^1.7.0",
         "eslint": "^9.0.0",
         "eslint-config-prettier": "^10.0.0",
@@ -68,7 +67,7 @@
         "tsup": "^8.0.0",
         "typescript": "~5.7.0",
         "typescript-eslint": "^8.0.0",
-        "vitest": "^3.0.0"
+        "vitest": "^4.0.0"
     },
     "lint-staged": {
         "src/**/*.ts": [
