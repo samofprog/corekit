@@ -17,7 +17,7 @@ function formatLog(message: string, data?: LogData): string {
 
     try {
         const json = JSON.stringify(data, (_, v: unknown) =>
-            v === null ? undefined : v
+            v === null ? undefined : typeof v === 'bigint' ? v.toString() : v
         );
 
         return !json || json === '{}' ? message : `${message} ${json}`;

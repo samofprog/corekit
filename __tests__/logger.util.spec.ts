@@ -22,9 +22,7 @@ describe('Logger log levels', () => {
 
         log(logger, 'test message', { key: 'value' });
 
-        expect(logger.log).toHaveBeenCalledWith(
-            'test message {"key":"value"}'
-        );
+        expect(logger.log).toHaveBeenCalledWith('test message {"key":"value"}');
     });
 
     it('should call logger.debug with the formatted message', () => {
@@ -53,10 +51,7 @@ describe('Logger log levels', () => {
 
         error(logger, 'boom', { code: 500 }, stack);
 
-        expect(logger.error).toHaveBeenCalledWith(
-            'boom {"code":500}',
-            stack
-        );
+        expect(logger.error).toHaveBeenCalledWith('boom {"code":500}', stack);
     });
 
     it('should call logger.error without stack when omitted', () => {
@@ -144,5 +139,16 @@ describe('Logger formatting', () => {
         log(logger, 'oops', circular);
 
         expect(logger.log).toHaveBeenCalledWith('oops');
+    });
+});
+describe('Logger bigint data', () => {
+    it('should serialize bigint values as strings', () => {
+        const logger = createMockLogger();
+
+        log(logger, 'payment', { id: 10n, orderId: 'ORD-1' });
+
+        expect(logger.log).toHaveBeenCalledWith(
+            'payment {"id":"10","orderId":"ORD-1"}'
+        );
     });
 });

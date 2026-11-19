@@ -1,5 +1,7 @@
 import type { AxiosLikeError, ErrorDetail } from './error.types.js';
 
+const MAX_RESPONSE_DATA_LENGTH = 2048;
+
 /**
  * Duck-typing guard for Axios-like errors.
  * Checks for the `isAxiosError: true` property that axios sets on all its errors.
@@ -7,18 +9,62 @@ import type { AxiosLikeError, ErrorDetail } from './error.types.js';
  * @internal
  */
 function isAxiosLikeError(error: unknown): error is AxiosLikeError {
-    return (
-        typeof error === 'object' &&
-        error !== null &&
-        'isAxiosError' in error &&
-        (error as Record<string, unknown>).isAxiosError === true
-    );
+    try {
+        return (
+            typeof error === 'object' &&
+            error !== null &&
+            'isAxiosError' in error &&
+            (error as Record<string, unknown>).isAxiosError === true
+        );
+    } catch {
+        return false;
+    }
+}
+
+function toSafeString(value: unknown): string {
+    try {
+        return String(value);
+    } catch {
+        return Object.prototype.toString.call(value);
+    }
+}
+
+function axiosMessage(error: AxiosLikeError): string {
+    const message: unknown = error.message;
+    return typeof message === 'string' ? message : toSafeString(message ?? '');
+}
+
+function toSafeJson(value: unknown): string | undefined {
+    try {
+        const json: unknown = JSON.stringify(value, (_, v: unknown) =>
+            typeof v === 'bigint' ? v.toString() : v
+        );
+        return typeof json === 'string' ? json : undefined;
+    } catch {
+        return undefined;
+    }
+}
+
+function truncate(text: string): string {
+    if (text.length <= MAX_RESPONSE_DATA_LENGTH) {
+        return text;
+    }
+
+    const lastCode = text.charCodeAt(MAX_RESPONSE_DATA_LENGTH - 1);
+    const end =
+        lastCode >= 0xd800 && lastCode <= 0xdbff
+            ? MAX_RESPONSE_DATA_LENGTH - 1
+            : MAX_RESPONSE_DATA_LENGTH;
+    const removed = text.length - end;
+    return `${text.slice(0, end)}…[truncated ${String(removed)} chars]`;
 }
 
 /**
  * Extracts a human-readable error message from any thrown value.
  *
- * - **Axios errors**: returns the base message with stringified response data appended.
+ * - **Axios errors**: returns the base message with stringified response data appended,
+ *   truncated to 2048 characters. The response body comes from the upstream server and may
+ *   contain secrets or personal data: use it for server-side logs only, never in client responses.
  * - **Native errors**: returns `error.message`.
  * - **Other values**: coerced to string via `String(error)`.
  *
@@ -39,25 +85,27 @@ function isAxiosLikeError(error: unknown): error is AxiosLikeError {
  */
 export function getErrorMessage(error: unknown): string {
     if (isAxiosLikeError(error)) {
-        const base = error.message;
+        const base = axiosMessage(error);
         const responseData = error.response?.data;
 
-        if (responseData !== undefined && responseData !== null) {
-            try {
-                return `${base} ${JSON.stringify(responseData)}`;
-            } catch {
-                return base;
-            }
+        if (responseData === undefined || responseData === null) {
+            return base;
         }
 
-        return base;
+        const serialized = toSafeJson(responseData);
+        if (serialized === undefined) {
+            return base;
+        }
+
+        const json = truncate(serialized);
+        return base ? `${base} ${json}` : json;
     }
 
     if (error instanceof Error) {
         return error.message;
     }
 
-    return String(error);
+    return toSafeString(error);
 }
 
 /**
@@ -101,6 +149,9 @@ export function getErrorDetails(error: unknown): {
  * - **Plain objects**: serialized to JSON as the message, with the raw value as `data`.
  * - **Primitives**: coerced to string.
  *
+ * The result includes the stack trace and the raw upstream response body.
+ * It is meant for server-side logs: never send it as is in an HTTP response.
+ *
  * @param error - The caught value.
  * @returns A normalized {@link ErrorDetail} object.
  *
@@ -120,9 +171,9 @@ export function getErrorDetails(error: unknown): {
 export function getErrorDetail(error: unknown): ErrorDetail {
     if (isAxiosLikeError(error)) {
         return {
-            message: error.message,
+            message: axiosMessage(error),
             code: error.code,
-            status: error.response?.status,
+            status: error.status ?? error.response?.status,
             data: error.response?.data,
             stack: error.stack,
         };
@@ -138,13 +189,13 @@ export function getErrorDetail(error: unknown): ErrorDetail {
 
     if (typeof error === 'object' && error !== null) {
         return {
-            message: JSON.stringify(error),
+            message: toSafeJson(error) ?? toSafeString(error),
             data: error,
         };
     }
 
     return {
-        message: String(error),
+        message: toSafeString(error),
         data: error,
     };
 }
@@ -177,8 +228,8 @@ export function isAxiosError(error: unknown): error is AxiosLikeError {
 /**
  * Checks whether the error is a network timeout.
  *
- * Detects both the `ECONNABORTED` code set by Axios and
- * any error whose message contains the word `"timeout"`.
+ * Detects the `ECONNABORTED` and `ETIMEDOUT` codes set by Axios and
+ * any Axios error whose message contains `"timeout"` (case-insensitive).
  *
  * @param error - The caught value.
  * @returns `true` if the error represents a timeout.
@@ -197,7 +248,9 @@ export function isAxiosError(error: unknown): error is AxiosLikeError {
 export function isTimeoutError(error: unknown): boolean {
     if (isAxiosLikeError(error)) {
         return (
-            error.code === 'ECONNABORTED' || error.message.includes('timeout')
+            error.code === 'ECONNABORTED' ||
+            error.code === 'ETIMEDOUT' ||
+            axiosMessage(error).toLowerCase().includes('timeout')
         );
     }
     return false;
